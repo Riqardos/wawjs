@@ -1,8 +1,7 @@
-const bom = require("../../src/bom/bom.0.1.0.js");
+const bom = require("../../src/bom/");
 const assert = require("assert");
 const fs = require("fs");
 
-console.log(bom.remove)
 
 // Test prevzaty od Adama Stullera
 describe("bom.js tests", function() {
@@ -42,7 +41,7 @@ describe("bom.js tests", function() {
         .once("data", (chunk) => {
 
           assert(Buffer.isBuffer(chunk));
-          console.log(chunk)
+
           // ef bb bf 2f 2f 20 77 69 74 68
           //          /  /     w  i  t  h 
           const expected = Buffer.from([
@@ -66,7 +65,6 @@ describe("bom.js tests", function() {
         .once("data", (chunk) => {
 
           assert(Buffer.isBuffer(chunk));
-          console.log(chunk)
           // ef bb bf 2f 2f 20 77 69 74 68
           //          /  /     w  i  t  h 
           const expected = Buffer.from([
@@ -92,7 +90,6 @@ describe("bom.js tests", function() {
         .on('finish', () => {
           const chunk =Buffer.concat(chunks)
           assert(Buffer.isBuffer(chunk));
-          console.log(chunk)
           // ef bb bf 2f 2f 20 77 69 74 68
           //          /  /     w  i  t  h 
           const expected = Buffer.from([
@@ -118,7 +115,6 @@ describe("bom.js tests", function() {
         .on('finish', () => {
           const chunk =Buffer.concat(chunks)
           assert(Buffer.isBuffer(chunk));
-          console.log(chunk)
           // ef bb bf 2f 2f 20 77 69 74 68
           //          /  /     w  i  t  h 
           const expected = Buffer.from([
@@ -128,6 +124,48 @@ describe("bom.js tests", function() {
           assert(chunk.equals(expected));
         })
   });
+
+  it("remove bom - shall not buffer all until _flush", (done) => {
+
+    let called = 0;
+
+    let file = `${__dirname}/data/with-bom.txt`;
+    fs.createReadStream(file, { highWaterMark: 1 })
+      .pipe(bom.remove())
+      .on("error", done)
+      .on("data", (chunk) => {
+        called++;
+
+      })
+      .on("finish", () => {
+        assert(called === "// with".length)
+        done();
+      });
+  });
+
+  // prevzate od kazimirova
+  it("remove bom - shell work with arbitrary chunks sizes", (done) => {
+
+    var chunks = [];
+
+    let file = `${__dirname}/data/with-bom.txt`;
+    fs.createReadStream(file, { highWaterMark: 2 })
+      .pipe(bom.remove())
+      .on("error", done)
+      .on("data", (chunk) => chunks.push(chunk))
+      .on("finish", () => {
+
+        let chunk = Buffer.concat(chunks);
+
+        assert(Buffer.isBuffer(chunk));
+        assert.equal(chunk.indexOf(bomBuffer), -1);
+        assert.equal(chunk[0], 0x2f);
+        assert.equal(chunk.length, 7); //bom and data
+
+        done();
+      });
+  });
+
 
 
 });
